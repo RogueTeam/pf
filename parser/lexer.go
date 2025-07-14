@@ -33,9 +33,9 @@ var lex = lexer.MustSimple([]lexer.SimpleRule{
 	{Name: "Address", Pattern: AddressExpr},
 	{Name: "Comment", Pattern: `#[^\n]*`},
 	{Name: "String", Pattern: `"(\\"|[^"])*"`},
+	{Name: "Ident", Pattern: `\$?[a-zA-Z_](\w|-)*`},
 	{Name: "Number", Pattern: `[-+]?(\d*\.)?\d+`},
-	{Name: "Ident", Pattern: `[a-zA-Z_](\w|-)*`},
 	{Name: "Punct", Pattern: `[-=:<>!]+`},
-	{Name: "eol", Pattern: `[\n\r]+`},
-	{Name: "whitespace", Pattern: `[ \t]+`},
+	{Name: "eol", Pattern: `(\n|\r)+`},
+	{Name: "whitespace", Pattern: `(\\|\s|\t)+`},
 })
