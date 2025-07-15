@@ -2,7 +2,6 @@ package parser
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"strings"
 
@@ -15,7 +14,7 @@ var parser = participle.MustBuild[Configuration](
 )
 
 func init() {
-	fmt.Println(parser.String())
+	// fmt.Println(parser.String())
 }
 
 func ParseReader(r io.Reader) (conf *Configuration, err error) {

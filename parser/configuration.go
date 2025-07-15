@@ -146,15 +146,15 @@ type (
 	}
 	Binary struct {
 		Lhs      int    `parser:"@Number"`
-		Operator string `parser:"@('<>' | '><' | ':')"`
+		Operator string `parser:"@(':' | '<>' | '><')"`
 		Rhs      int    `parser:"@Number"`
 	}
-	PortOp struct {
+	Operation struct {
 		Binary *Binary `parser:"@@"`
 		Unary  *Unary  `parser:"| @@"`
 	}
 	Port struct {
-		Ports ValueOrBraceList[PortOp] `parser:"'port' @@"`
+		Ports ValueOrBraceList[Operation] `parser:"'port' @@"`
 	}
 	HostsTarget struct {
 		Any     BooleanSet `parser:"( @('any')"`
