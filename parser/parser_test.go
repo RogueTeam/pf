@@ -20,7 +20,9 @@ func Test_Parse(t *testing.T) {
 				defer file.Close()
 
 				conf, err := parser.ParseReader(file)
-				assertions.Nil(err, "failed to parse configuration")
+				if !assertions.Nil(err, "failed to parse configuration") {
+					return
+				}
 
 				c, _ := json.MarshalIndent(conf, "", "\t")
 				t.Log(string(c))

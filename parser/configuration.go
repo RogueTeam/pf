@@ -1,6 +1,10 @@
 package parser
 
-import "net/netip"
+import (
+	"net/netip"
+
+	"go4.org/netipx"
+)
 
 type (
 	Timeout struct {
@@ -8,7 +12,7 @@ type (
 		Value    float64 `parser:"@Number"`
 	}
 	TimeoutOption struct {
-		ValueOrBraceList[Timeout] `parser:"'timeout' @@"`
+		Timeout ValueOrBraceList[Timeout] `parser:"'timeout' @@"`
 	}
 	RulesetOptimizationOption struct {
 		Value string `parser:"'ruleset-optimization' @('none' | 'basic' | 'profile')"`
@@ -21,7 +25,7 @@ type (
 		Value    int    `parser:"@Number"`
 	}
 	LimitOption struct {
-		ValueOrBraceList[LimitItem] `parser:"'limit' @@"`
+		Limit ValueOrBraceList[LimitItem] `parser:"'limit' @@"`
 	}
 	LoginInterfaceOption struct {
 		None      BooleanSet `parser:"'logininterface' ( @('none')"`
@@ -41,9 +45,9 @@ type (
 		Flush *FlushStateOverloadEntry `parser:"@@?"`
 	}
 	StateOption struct {
-		Max            *int       `parser:"('max' @Number)"`
-		NoSync         BooleanSet `parser:"| @('no-sync')"`
-		*Timeout       `parser:"| @@"`
+		Max            *int                `parser:"('max' @Number)"`
+		NoSync         BooleanSet          `parser:"| @('no-sync')"`
+		Timeout        *Timeout            `parser:"| @@"`
 		Sloppy         BooleanSet          `parser:"| @('sloppy')"`
 		Pflow          BooleanSet          `parser:"| @('pflow')"`
 		SourceTrack    string              `parser:"| ('source-track' @('rule' | 'global'))"`
@@ -56,7 +60,7 @@ type (
 		Floating       BooleanSet          `parser:"@('floating')"`
 	}
 	StateDefaultsOption struct {
-		ValueOrRawList[StateOption] `parser:"'state-defaults' @@"`
+		Defaults ValueOrRawList[StateOption] `parser:"'state-defaults' @@"`
 	}
 	FingerPrintsOption struct {
 		Filename string `parser:"'fingerprints' @(Ident | String | Filename)"`
@@ -67,7 +71,7 @@ type (
 	}
 	IfSpec       ValueOrBraceList[IfSpecEntry]
 	SkipOnOption struct {
-		IfSpec `parser:"'skip' 'on' @@"`
+		IfSpec IfSpec `parser:"'skip' 'on' @@"`
 	}
 	DebugOption struct {
 		Level string `parser:"'debug' @('emerg' | 'alert' | 'crit' | 'err' | 'warning' | 'notice' | 'info' | 'debug')"`
@@ -77,23 +81,23 @@ type (
 		NoDf       BooleanSet `parser:"@('no-df')?"`
 	}
 	Option struct {
-		*TimeoutOption             `parser:"'set' (@@"`
-		*RulesetOptimizationOption `parser:"| @@"`
-		*OptimizatioOption         `parser:"| @@"`
-		*LimitOption               `parser:"| @@"`
-		*BlockPolicyOption         `parser:"| @@"`
-		*StatePolicyOption         `parser:"| @@"`
-		*StateDefaultsOption       `parser:"| @@"`
-		*FingerPrintsOption        `parser:"| @@"`
-		*SkipOnOption              `parser:"| @@"`
-		*DebugOption               `parser:"| @@"`
-		*ReassembleOption          `parser:"| @@)"`
+		Timeout             *TimeoutOption             `parser:"'set' (@@"`
+		RulesetOptimization *RulesetOptimizationOption `parser:"| @@"`
+		Optimizatio         *OptimizatioOption         `parser:"| @@"`
+		Limit               *LimitOption               `parser:"| @@"`
+		BlockPolicy         *BlockPolicyOption         `parser:"| @@"`
+		StatePolicy         *StatePolicyOption         `parser:"| @@"`
+		StateDefaults       *StateDefaultsOption       `parser:"| @@"`
+		FingerPrints        *FingerPrintsOption        `parser:"| @@"`
+		SkipOn              *SkipOnOption              `parser:"| @@"`
+		Debug               *DebugOption               `parser:"| @@"`
+		Reassemble          *ReassembleOption          `parser:"| @@)"`
 	}
 	ActionBlockReturn struct {
 		Return string `parser:"@('return' | 'drop')"`
 	}
 	ActionBlock struct {
-		*ActionBlockReturn `parser:"'block' @@?"`
+		Return *string `parser:"'block' @('return' | 'return-icmp' | 'return-icmp6' | 'return-rst' | 'drop')?"`
 	}
 	Action struct {
 		Pass  BooleanSet   `parser:"@('pass')"`
@@ -107,10 +111,10 @@ type (
 		To      *string    `parser:"| ('to' @Ident))"`
 	}
 	Log struct {
-		Options *ValueOrRawList[LogOption] `parser:"'log' ('(' @@ ')')?"`
+		Options ValueOrRawList[LogOption] `parser:"'log' ('(' @@ ')')?"`
 	}
 	PfRuleOn struct {
-		*IfSpec `parser:"'on' ( @@"`
+		IfSpec  *IfSpec `parser:"'on' ( @@"`
 		Rdomain *string `parser:"| ('rdomain' @Number))"`
 	}
 	AddressFamily struct {
@@ -121,24 +125,24 @@ type (
 		Number *string `parser:"| @Number"`
 	}
 	ProtoSpec struct {
-		ValueOrBraceList[Protocol] `parser:"'proto' @@"`
+		Protocol ValueOrBraceList[Protocol] `parser:"'proto' @@"`
 	}
-	Address struct {
-		Hostname                  *string     `parser:"@Hostname"`
-		InterfaceOrInterfaceGroup *string     `parser:"| (@Ident | ( '(' @Ident ')' ))"`
-		IP                        *netip.Addr `parser:"| @Address"`
+	IP struct {
+		Mask    *netipx.IPRange `parser:"@IPRange"`
+		CIDR    *netip.Prefix   `parser:"| @CIDR"`
+		Address *netip.Addr     `parser:"| @Address"`
 	}
 	Host struct {
 		Negate   BooleanSet `parser:"@('!')?"`
-		Address  *Address   `parser:"( ( @@"`
-		Mask     *int       `parser:"('/' @Number)?"`
+		IP       *IP        `parser:"( ( @@"`
 		Weight   *int       `parser:"('weight' @Number)? )"`
+		Other    *string    `parser:"| @Ident"`
 		AsString *string    `parser:"| ('<' @String '>') )"`
 	}
 	Unary struct {
 		Operator string  `parser:"@('=' | '!=' | '<' | '<=' | '>' | '>=')?"`
-		Name     *string `parser:"(@Ident"`
-		Number   *int    `parser:"| @Number)"`
+		Number   *int    `parser:"( @Number "`
+		Name     *string `parser:"| @Ident )"`
 	}
 	Binary struct {
 		Lhs      int    `parser:"@Number"`
@@ -146,27 +150,27 @@ type (
 		Rhs      int    `parser:"@Number"`
 	}
 	PortOp struct {
-		*Unary  `parser:"@@"`
-		*Binary `parser:"| @@"`
+		Binary *Binary `parser:"@@"`
+		Unary  *Unary  `parser:"| @@"`
 	}
 	Port struct {
-		ValueOrBraceList[PortOp] `parser:"'port' @@"`
+		Ports ValueOrBraceList[PortOp] `parser:"'port' @@"`
 	}
 	HostsTarget struct {
 		Any     BooleanSet `parser:"( @('any')"`
 		NoRoute BooleanSet `parser:"| @('no-route')"`
 		Self    BooleanSet `parser:"| @('self')"`
-		Route   *string    `parser:"| ('route' @String)"`
+		Route   *string    `parser:"| ('route' @(String | Ident))"`
 		Host    *Host      `parser:"| @@ )"`
-		*Port   `parser:"@@?"`
+		Port    *Port      `parser:"@@?"`
 	}
 	HostsFromTo struct {
 		From HostsTarget `parser:"'from' @@"`
 		To   HostsTarget `parser:"'to' @@"`
 	}
 	Hosts struct {
-		All          BooleanSet `parser:"@('all')"`
-		*HostsFromTo `parser:"| @@"`
+		All         BooleanSet   `parser:"@('all')"`
+		HostsFromTo *HostsFromTo `parser:"| @@"`
 	}
 	FilterOption struct {
 		// *User        `parser:"@@"`
@@ -179,20 +183,20 @@ type (
 		StateOptions *ValueOrRawList[StateOption] `parser:"| ('(' @@ ')')"`
 	}
 	PfRule struct {
-		Action        `parser:"@@"`
-		Direction     *string `parser:"@('in' | 'out')?"`
-		*Log          `parser:"@@?"`
-		Quick         BooleanSet                    `parser:"@('quick')?"`
-		On            *PfRuleOn                     `parser:"@@?"`
-		AddressFamily *AddressFamily                `parser:"@@?"`
-		ProtoSpec     *ProtoSpec                    `parser:"@@?"`
-		Hosts         *Hosts                        `parser:"@@?"`
-		FilterOptions *ValueOrRawList[FilterOption] `parser:"@@?"`
+		Action    Action     `parser:"@@"`
+		Direction *string    `parser:"@('in' | 'out')?"`
+		Log       *Log       `parser:"@@?"`
+		Quick     BooleanSet `parser:"@('quick')?"`
+		// On            *PfRuleOn      `parser:"@@?"`
+		AddressFamily *AddressFamily `parser:"@@?"`
+		ProtoSpec     *ProtoSpec     `parser:"@@?"`
+		Hosts         *Hosts         `parser:"@@?"`
+		// FilterOptions *ValueOrRawList[FilterOption] `parser:"@@?"`
 	}
 	Line struct {
-		*Comment `parser:"@Comment"`
-		*Option  `parser:"| @@"`
-		*PfRule  `parser:"| @@"`
+		Option  *Option  `parser:"@@"`
+		PfRule  *PfRule  `parser:"| @@"`
+		Comment *Comment `parser:"| @Comment"`
 		// *AntiSpoofRule `parser:"| @@"`
 		// *QueueRule     `parser:"| @@"`
 		// *AnchorRule    `parser:"| @@"`

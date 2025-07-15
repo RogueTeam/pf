@@ -2,8 +2,8 @@ package parser
 
 import (
 	"bytes"
+	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/alecthomas/participle/v2"
@@ -14,8 +14,13 @@ var parser = participle.MustBuild[Configuration](
 	participle.Unquote("String"),
 )
 
+func init() {
+	fmt.Println(parser.String())
+}
+
 func ParseReader(r io.Reader) (conf *Configuration, err error) {
-	return parser.Parse(":reader:", r, participle.Trace(os.Stdout))
+	return parser.Parse(":reader:", r) //	participle.Trace(os.Stdout),
+
 }
 
 func ParseContent[T string | ~[]byte](b T) (conf *Configuration, err error) {
