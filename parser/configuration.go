@@ -156,6 +156,12 @@ type (
 	Port struct {
 		Ports ValueOrBraceList[Operation] `parser:"'port' @@"`
 	}
+	OsOption struct {
+		Value string `parser:"@(Ident | String)"`
+	}
+	Os struct {
+		Selected ValueOrBraceList[OsOption] `parser:"'os' @@"`
+	}
 	HostsTarget struct {
 		Any     BooleanSet `parser:"( @('any')"`
 		NoRoute BooleanSet `parser:"| @('no-route')"`
@@ -165,8 +171,9 @@ type (
 		Port    *Port      `parser:"@@?"`
 	}
 	HostsFromTo struct {
-		From HostsTarget `parser:"'from' @@"`
-		To   HostsTarget `parser:"'to' @@"`
+		From   HostsTarget `parser:"'from' @@"`
+		FromOs *Os         `parser:"@@?"`
+		To     HostsTarget `parser:"'to' @@"`
 	}
 	Hosts struct {
 		All         BooleanSet   `parser:"@('all')"`
@@ -183,15 +190,15 @@ type (
 		StateOptions *ValueOrRawList[StateOption] `parser:"| ('(' @@ ')')"`
 	}
 	PfRule struct {
-		Action    Action     `parser:"@@"`
-		Direction *string    `parser:"@('in' | 'out')?"`
-		Log       *Log       `parser:"@@?"`
-		Quick     BooleanSet `parser:"@('quick')?"`
-		// On            *PfRuleOn      `parser:"@@?"`
-		AddressFamily *AddressFamily `parser:"@@?"`
-		ProtoSpec     *ProtoSpec     `parser:"@@?"`
-		Hosts         *Hosts         `parser:"@@?"`
-		// FilterOptions *ValueOrRawList[FilterOption] `parser:"@@?"`
+		Action        Action                        `parser:"@@"`
+		Direction     *string                       `parser:"@('in' | 'out')?"`
+		Log           *Log                          `parser:"@@?"`
+		Quick         BooleanSet                    `parser:"@('quick')?"`
+		On            *PfRuleOn                     `parser:"@@?"`
+		AddressFamily *AddressFamily                `parser:"@@?"`
+		ProtoSpec     *ProtoSpec                    `parser:"@@?"`
+		Hosts         *Hosts                        `parser:"@@?"`
+		FilterOptions *ValueOrRawList[FilterOption] `parser:"@@?"`
 	}
 	Line struct {
 		Option  *Option  `parser:"@@"`
