@@ -17,7 +17,7 @@ type ValueOrBraceList[T any] struct {
 }
 
 type ValueOrRawList[T any] struct {
-	Values []T `parser:"@@ | ( @@ (',' @@)* )"`
+	Values []T `parser:"@@ (','? @@)*"`
 }
 
 type Comment string

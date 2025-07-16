@@ -172,12 +172,13 @@ type (
 		Self    BooleanSet `parser:"| @('self')"`
 		Route   *string    `parser:"| ('route' @(String | Ident))"`
 		Host    *Host      `parser:"| @@ )"`
-		Port    *Port      `parser:"@@?"`
 	}
 	HostsFromTo struct {
-		From   HostsTarget `parser:"'from' @@"`
-		FromOs *Os         `parser:"@@?"`
-		To     HostsTarget `parser:"'to' @@"`
+		From     ValueOrBraceList[HostsTarget] `parser:"'from' @@"`
+		FromPort *Port                         `parser:"@@?"`
+		FromOs   *Os                           `parser:"@@?"`
+		To       ValueOrBraceList[HostsTarget] `parser:"'to' @@"`
+		ToPort   *Port                         `parser:"@@?"`
 	}
 	Hosts struct {
 		All         BooleanSet   `parser:"@('all')"`
@@ -198,6 +199,26 @@ type (
 		Selected string `parser:"@('lowdelay' | 'throughput' | 'reliability')"`
 		Number   int    `parser:"@Hexnumber"`
 	}
+	Label struct {
+		Text string `parser:"'label' @(String | Ident)"`
+	}
+	Tag struct {
+		Text string `parser:"'tag' @(String | Ident)"`
+	}
+	Tagged struct {
+		Negate BooleanSet `parser:"@('!')?"`
+		Text   string     `parser:"'tagged' @(String | Ident)"`
+	}
+	ScrubOption struct {
+		NoDf          BooleanSet `parser:"@('no-df')"`
+		MinTtl        *int       `parser:"| ('min-ttl' @Number)"`
+		MaxMss        *int       `parser:"| ('max-mss' @Number)"`
+		ReassembleTcp BooleanSet `parser:"| @('reassemble' 'tcp')"`
+		RandomId      BooleanSet `parser:"| @('random-id')"`
+	}
+	ScrubOptions struct {
+		Options ValueOrRawList[ScrubOption] `parser:"@@"`
+	}
 	FilterOption struct {
 		User  *User  `parser:"@@"`
 		Group *Group `parser:"| @@"`
@@ -205,8 +226,32 @@ type (
 		// TODO: IcmpType     *IcmpType                    `parser:"| @@"`
 		// TODO: IcmpType6    *IcmpType6                   `parser:"| @@"`
 		Tos          *Tos                         `parser:"| ('tos' @@)"`
-		State        *string                      `parser:"(@('no' | 'keep' | 'modulate' | 'synproxy') 'state')"`
+		State        *string                      `parser:"| (@('no' | 'keep' | 'modulate' | 'synproxy') 'state')"`
 		StateOptions *ValueOrRawList[StateOption] `parser:"| ('(' @@ ')')"`
+		ScrubOption  *ScrubOptions                `parser:"| ('scrub' '(' @@ ')')"`
+		// TODO: FRAGMENT
+		// TODO: ALLOWOPTIONS
+		// TODO: once
+		// TODO: Divert-packet
+		// TODO: divert-reply
+		// TODO: divert-to port
+		Label  *Label  `parser:"| @@"`
+		Tag    *Tag    `parser:"| @@"`
+		Tagged *Tagged `parser:"| @@"`
+		// max-pkt-rate number "/" seconds: Specifies the maximum packet rate in packets per second.
+		// "set delay" number: Sets a delay for packets.
+		// "set prio" ( number | "(" number [ [ "," ] number ] ")" ): Sets the priority of packets. Can be a single number or a range.
+		// "set queue" ( string | "(" string [ [ "," ] string ] ")" ): Assigns packets to a specific queue. Can be a single queue name or a list of queue names.
+		// "rtable" number: Specifies the routing table to use.
+		// "probability" number"%": Sets the probability of the rule matching.
+		// "prio" number: Sets the priority of the rule itself.
+		// "af-to" af "from" ( redirhost | "{" redirhost-list "}" ) [ "to" ( redirhost | "{" redirhost-list "}" ) ]: Redirects traffic to an address family from a specified host or list of hosts, optionally to another host or list of hosts.
+		// "binat-to" ( redirhost | "{" redirhost-list "}" ) [ portspec ] [ pooltype ]: Performs bidirectional NAT to a specified host or list of hosts, with optional port specification and pool type.
+		// "rdr-to" ( redirhost | "{" redirhost-list "}" ) [ portspec ] [ pooltype ]: Redirects traffic to a specified host or list of hosts, with optional port specification and pool type.
+		// "nat-to" ( redirhost | "{" redirhost-list "}" ) [ portspec ] [ pooltype ] [ "static-port" ]: Performs NAT to a specified host or list of hosts, with optional port specification, pool type, and static-port flag.
+		// [ route ]: Specifies a routing action.
+		// [ "set tos" tos ]: Sets the Type of Service (TOS) field in the IP header.
+		// [ [ "!" ] "received-on" ( interface-name | interface-group ) ]: Matches packets received on a specific interface or interface group, optionally negated.
 	}
 	PfRule struct {
 		Action        Action                        `parser:"@@"`
@@ -219,17 +264,34 @@ type (
 		Hosts         *Hosts                        `parser:"@@?"`
 		FilterOptions *ValueOrRawList[FilterOption] `parser:"@@?"`
 	}
+	AntiSpoofRule struct {
+		Log           *Log           `parser:"'antispoof' @@?"`
+		Quick         BooleanSet     `parser:"@('quick')?"`
+		IfSpec        IfSpec         `parser:"'for' @@"`
+		AddressFamily *AddressFamily `parser:"@@?"`
+		Label         *Label         `parser:"@@?"`
+	}
+	Literal struct {
+		Address Address `parser:"@@"`
+		String  string  `parser:"| @String"`
+		Number  int     `parser:"| @Number"`
+	}
+	Assignment struct {
+		Variable string                    `parser:"@Ident"`
+		Value    ValueOrBraceList[Literal] `parser:"'=' @@"`
+	}
 	Line struct {
-		Option  *Option  `parser:"@@"`
-		PfRule  *PfRule  `parser:"| @@"`
-		Comment *Comment `parser:"| @Comment"`
-		// *AntiSpoofRule `parser:"| @@"`
-		// *QueueRule     `parser:"| @@"`
-		// *AnchorRule    `parser:"| @@"`
-		// *AnchorClose   `parser:"| @@"`
-		// *LoadAnchor    `parser:"| @@"`
-		// *TableRule     `parser:"| @@"`
-		// *Inclue        `parser:"| @@"`
+		Option        *Option        `parser:"@@"`
+		PfRule        *PfRule        `parser:"| @@"`
+		Comment       *Comment       `parser:"| @Comment"`
+		AntiSpoofRule *AntiSpoofRule `parser:"| @@"`
+		Assignment    *Assignment    `parser:"| @@"`
+		// QueueRule *QueueRule     `parser:"| @@"`
+		// AnchorRule *AnchorRule    `parser:"| @@"`
+		// AnchorClose *AnchorClose   `parser:"| @@"`
+		// LoadAnchor *LoadAnchor    `parser:"| @@"`
+		// TableRule *TableRule     `parser:"| @@"`
+		// Inclue *Inclue        `parser:"| @@"`
 	}
 	Configuration struct {
 		Line []*Line `parser:"@@*"`
