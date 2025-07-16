@@ -19,6 +19,7 @@ var lex = lexer.MustStateful(lexer.Rules{
 		{Name: "Address", Pattern: AddressExpr},
 		{Name: "Ident", Pattern: `\$?[a-zA-Z_](\w|-)*`},
 		{Name: "Punct", Pattern: `[-{}()=>!<:,]+`},
+		{Name: "Hexnumber", Pattern: `0x[0-9a-fA-F]+`},
 		{Name: "Number", Pattern: `\d+`},
 		{Name: "Comment", Pattern: `#[^\n]*`},
 		{Name: "String", Pattern: `"(\\"|[^"])*"`},

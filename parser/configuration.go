@@ -132,11 +132,15 @@ type (
 		CIDR    *netip.Prefix   `parser:"| @CIDR"`
 		Address *netip.Addr     `parser:"| @Address"`
 	}
+	Address struct {
+		IP       *IP     `parser:"@@"`
+		Hostname *string `parser:"| @Hostname"`
+		Other    *string `parser:"| @Ident"`
+	}
 	Host struct {
 		Negate   BooleanSet `parser:"@('!')?"`
-		IP       *IP        `parser:"( ( @@"`
+		Address  *Address   `parser:"( ( @@"`
 		Weight   *int       `parser:"('weight' @Number)? )"`
-		Other    *string    `parser:"| @Ident"`
 		AsString *string    `parser:"| ('<' @String '>') )"`
 	}
 	Unary struct {
@@ -179,13 +183,28 @@ type (
 		All         BooleanSet   `parser:"@('all')"`
 		HostsFromTo *HostsFromTo `parser:"| @@"`
 	}
+	User struct {
+		Selected ValueOrBraceList[Operation] `parser:"'user' @@"`
+	}
+	Group struct {
+		Selected ValueOrBraceList[Operation] `parser:"'group' @@"`
+	}
+	Flags struct {
+		Left  []string   `parser:"'flags' @('F' | 'S' | 'R' | 'P' | 'A' | 'U' | 'E' | 'W')?"`
+		Right string     `parser:"'/' (@('F' | 'S' | 'R' | 'P' | 'A' | 'U' | 'E' | 'W')"`
+		Any   BooleanSet `parser:"@('any') )"`
+	}
+	Tos struct {
+		Selected string `parser:"@('lowdelay' | 'throughput' | 'reliability')"`
+		Number   int    `parser:"@Hexnumber"`
+	}
 	FilterOption struct {
-		// *User        `parser:"@@"`
-		// *Group       `parser:"| @@"`
-		// *Flags       `parser:"| @@"`
-		// *IcmpType    `parser:"| @@"`
-		// *IcmpType6   `parser:"| @@"`
-		// *Tos         `parser:"| ('tos' @@)"`
+		User  *User  `parser:"@@"`
+		Group *Group `parser:"| @@"`
+		Flags *Flags `parser:"| @@"`
+		// TODO: IcmpType     *IcmpType                    `parser:"| @@"`
+		// TODO: IcmpType6    *IcmpType6                   `parser:"| @@"`
+		Tos          *Tos                         `parser:"| ('tos' @@)"`
 		State        *string                      `parser:"(@('no' | 'keep' | 'modulate' | 'synproxy') 'state')"`
 		StateOptions *ValueOrRawList[StateOption] `parser:"| ('(' @@ ')')"`
 	}
