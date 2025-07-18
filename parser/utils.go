@@ -12,12 +12,38 @@ func (b *BooleanSet) Capture(values []string) error {
 	return nil
 }
 
+type Variable struct {
+	Name string `parser:"@Variable"`
+}
+
+type String struct {
+	Value string `parser:"@String"`
+}
+
+type Text struct {
+	Value string `parser:"@(String | Ident | Hostname | Filename)"`
+}
+
+type Number struct {
+	Value int `parser:"@Number"`
+}
+
+type Value[T any] struct {
+	Direct      *T        `parser:"@@"`
+	Variable    *Variable `parser:"| @@"`
+	Parentheses *Value[T] `parser:"| '(' @@ ')'"`
+}
+
+type Parentheses[T any] struct {
+	Value T `parser:"('(' @@ ')') | @@"`
+}
+
 type ValueOrBraceList[T any] struct {
-	Values []T `parser:"@@ | ('{' @@ (',' @@)* '}')"`
+	Values []Value[T] `parser:"@@ | ('{' @@ (',' @@)* '}')"`
 }
 
 type ValueOrRawList[T any] struct {
-	Values []T `parser:"@@ (','? @@)*"`
+	Values []Value[T] `parser:"@@ (','? @@)*"`
 }
 
 type Comment string

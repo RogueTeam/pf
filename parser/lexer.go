@@ -7,19 +7,22 @@ import (
 const (
 	IPv4Expr    = "(" + `\d{1,3}(\.\d{1,3}){3}` + ")"
 	IPv6Expr    = "(" + "::::" + ")"
-	AddressExpr = "(" + IPv4Expr + ")" // "|" + IPv6Expr + ")"
+	AddressExpr = "(" + IPv4Expr + "|" + IPv6Expr + ")"
 	IPRange     = "(" + AddressExpr + "-" + AddressExpr + ")"
 	CIDR        = "(" + AddressExpr + `/\d{1,3})`
 )
 
 var lex = lexer.MustStateful(lexer.Rules{
 	"Root": []lexer.Rule{
+		// Not matching
 		{Name: "eol", Pattern: `(\n|\r)+`},
 		{Name: "whitespace", Pattern: `(\\|\s|\t)+`},
+		// Matching
 		{Name: "IPRange", Pattern: IPRange},
 		{Name: "CIDR", Pattern: CIDR},
 		{Name: "Address", Pattern: AddressExpr},
-		{Name: "Ident", Pattern: `\$?[a-zA-Z_](\w|-)*`},
+		{Name: "Variable", Pattern: `\$[a-zA-Z_](\w|-)*`},
+		{Name: "Ident", Pattern: `[a-zA-Z_](\w|-)*`},
 		{Name: "Punct", Pattern: `[-{}()=>!<:,]+`},
 		{Name: "Hexnumber", Pattern: `0x[0-9a-fA-F]+`},
 		{Name: "Number", Pattern: `\d+`},

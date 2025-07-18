@@ -9,8 +9,8 @@ import (
 
 type (
 	Timeout struct {
-		Variable string  `parser:"@('tcp.first' | 'tcp.opening' | 'tcp.established' | 'tcp.closing' | 'tcp.finwait' | 'tcp.closed' | 'tcp.tsdiff' | 'udp.first' | 'udp.single' | 'udp.multiple' | 'icmp.first' | 'icmp.error' | 'other.first' | 'other.single' | 'other.multiple' | 'frag' | 'interval' | 'src.track' | 'adaptive.start' | 'adaptive.end')"`
-		Value    float64 `parser:"@Number"`
+		Variable string        `parser:"@('tcp.first' | 'tcp.opening' | 'tcp.established' | 'tcp.closing' | 'tcp.finwait' | 'tcp.closed' | 'tcp.tsdiff' | 'udp.first' | 'udp.single' | 'udp.multiple' | 'icmp.first' | 'icmp.error' | 'other.first' | 'other.single' | 'other.multiple' | 'frag' | 'interval' | 'src.track' | 'adaptive.start' | 'adaptive.end')"`
+		Value    Value[Number] `parser:"@@"`
 	}
 	TimeoutOption struct {
 		Timeout ValueOrBraceList[Timeout] `parser:"'timeout' @@"`
@@ -22,15 +22,15 @@ type (
 		Value string `parser:"'optimization' @('default' | 'normal' | 'high-latency' | 'satellite' | 'aggressive' | 'convervative')"`
 	}
 	LimitItem struct {
-		Variable string `parser:"@('states' | 'frags' | 'src-nodes' | 'tables' | 'table-entries')"`
-		Value    int    `parser:"@Number"`
+		Variable string        `parser:"@('states' | 'frags' | 'src-nodes' | 'tables' | 'table-entries')"`
+		Value    Value[Number] `parser:"@@"`
 	}
 	LimitOption struct {
 		Limit ValueOrBraceList[LimitItem] `parser:"'limit' @@"`
 	}
 	LoginInterfaceOption struct {
-		None      BooleanSet `parser:"'logininterface' ( @('none')"`
-		Interface string     `parser:"| @Ident)"`
+		None      BooleanSet  `parser:"'logininterface' ( @('none')"`
+		Interface Value[Text] `parser:"| @@)"`
 	}
 	BlockPolicyOption struct {
 		Policy string `parser:"'block-policy' @('drop' | 'return')"`
@@ -42,20 +42,24 @@ type (
 		Global BooleanSet `parser:"'flush' @('global')?"`
 	}
 	StateOverloadEntry struct {
-		Value string                   `parser:"'overload' '<' @String '>'"`
+		Value Value[String]            `parser:"'overload' '<' @@ '>'"`
 		Flush *FlushStateOverloadEntry `parser:"@@?"`
 	}
+	MaxSrcConnRage struct {
+		Packets Value[Number] `parser:"'max-src-conn-rate' @@"`
+		Seconds Value[Number] `parser:"'/' @@"`
+	}
 	StateOption struct {
-		Max            *int                `parser:"('max' @Number)"`
+		Max            *Value[Number]      `parser:"('max' @@)"`
 		NoSync         BooleanSet          `parser:"| @('no-sync')"`
 		Timeout        *Timeout            `parser:"| @@"`
 		Sloppy         BooleanSet          `parser:"| @('sloppy')"`
 		Pflow          BooleanSet          `parser:"| @('pflow')"`
 		SourceTrack    string              `parser:"| ('source-track' @('rule' | 'global'))"`
-		MaxSrcNodes    *int                `parser:"| ('max-src-nodes' @Number)"`
-		MaxSrcStates   *int                `parser:"| ('max-src-states' @Number)"`
-		MaxSrcConn     *int                `parser:"| ('max-src-conn' @Number)"`
-		MaxSrcConnRage *[2]int             `parser:"| ('max-src-conn-rate' @Number '/' @Number)"`
+		MaxSrcNodes    *Value[Number]      `parser:"| ('max-src-nodes' @@)"`
+		MaxSrcStates   *Value[Number]      `parser:"| ('max-src-states' @@)"`
+		MaxSrcConn     *Value[Number]      `parser:"| ('max-src-conn' @@)"`
+		MaxSrcConnRate *MaxSrcConnRage     `parser:"| @@"`
 		Overload       *StateOverloadEntry `parser:"| @@"`
 		IfFloating     BooleanSet          `parser:"| @('if-floating')"`
 		Floating       BooleanSet          `parser:"| @('floating')"`
@@ -64,11 +68,11 @@ type (
 		Defaults ValueOrRawList[StateOption] `parser:"'state-defaults' @@"`
 	}
 	FingerPrintsOption struct {
-		Filename string `parser:"'fingerprints' @(Ident | String | Filename)"`
+		Filename Value[Text] `parser:"'fingerprints' @@"`
 	}
 	IfSpecEntry struct {
-		Negate                    BooleanSet `parser:"'!'?"`
-		InterfaceOrInterfaceGroup string     `parser:"@Ident"`
+		Negate                    BooleanSet  `parser:"'!'?"`
+		InterfaceOrInterfaceGroup Value[Text] `parser:"@@"`
 	}
 	IfSpec       ValueOrBraceList[IfSpecEntry]
 	SkipOnOption struct {
@@ -106,24 +110,24 @@ type (
 		Block *ActionBlock `parser:"| @@"`
 	}
 	LogOption struct {
-		All     BooleanSet `parser:"@('all')"`
-		Matches BooleanSet `parser:"| @('matches')"`
-		User    BooleanSet `parser:"| @('user')"`
-		To      *string    `parser:"| ('to' @Ident)"`
+		All     BooleanSet   `parser:"@('all')"`
+		Matches BooleanSet   `parser:"| @('matches')"`
+		User    BooleanSet   `parser:"| @('user')"`
+		To      *Value[Text] `parser:"| ('to' @@)"`
 	}
 	Log struct {
 		Options ValueOrRawList[LogOption] `parser:"'log' ('(' @@ ')')?"`
 	}
 	PfRuleOn struct {
-		IfSpec  *IfSpec `parser:"'on' ( @@"`
-		Rdomain *string `parser:"| ('rdomain' @Number))"`
+		IfSpec  *IfSpec        `parser:"'on' ( @@"`
+		Rdomain *Value[Number] `parser:"| ('rdomain' @@))"`
 	}
 	AddressFamily struct {
 		Is4 BooleanSet `parser:"@('inet') | 'inet6'"`
 	}
 	Protocol struct {
-		Name   *string `parser:"@Ident"`
-		Number *string `parser:"| @Number"`
+		Name   *Value[Text]   `parser:"@@"`
+		Number *Value[Number] `parser:"| @@"`
 	}
 	ProtoSpec struct {
 		Protocol ValueOrBraceList[Protocol] `parser:"'proto' @@"`
@@ -134,26 +138,25 @@ type (
 		Address *netip.Addr     `parser:"| @Address"`
 	}
 	Address struct {
-		IP         *IP        `parser:"@@"`
-		UrpfFailed BooleanSet `parser:"| @('urpf-failed')"`
-		Hostname   *string    `parser:"| @Hostname"`
-		Other      *string    `parser:"| @Ident"`
+		IP         *Value[IP]   `parser:"@@"`
+		UrpfFailed BooleanSet   `parser:"| @('urpf-failed')"`
+		Text       *Value[Text] `parser:"| @@"`
 	}
 	Host struct {
-		Negate   BooleanSet `parser:"@('!')?"`
-		Address  *Address   `parser:"( ( @@"`
-		Weight   *int       `parser:"('weight' @Number)? )"`
-		AsString *string    `parser:"| ('<' @(String | Ident) '>') )"`
+		Negate   BooleanSet     `parser:"@('!')?"`
+		Address  *Address       `parser:"( ( @@"`
+		Weight   *Value[Number] `parser:"('weight' @@)? )"`
+		AsString *Value[Text]   `parser:"| ('<' @@ '>') )"`
 	}
 	Unary struct {
-		Operator string  `parser:"@('=' | '!=' | '<' | '<=' | '>' | '>=')?"`
-		Number   *int    `parser:"( @Number "`
-		Name     *string `parser:"| @Ident )"`
+		Operator string         `parser:"@('=' | '!=' | '<' | '<=' | '>' | '>=')?"`
+		Number   *Value[Number] `parser:"( @@ "`
+		Name     *Value[Text]   `parser:"| @@ )"`
 	}
 	Binary struct {
-		Lhs      int    `parser:"@Number"`
-		Operator string `parser:"@(':' | '<>' | '><')"`
-		Rhs      int    `parser:"@Number"`
+		Lhs      Value[Number] `parser:"@@"`
+		Operator string        `parser:"@(':' | '<>' | '><')"`
+		Rhs      Value[Number] `parser:"@@"`
 	}
 	Operation struct {
 		Binary *Binary `parser:"@@"`
@@ -162,18 +165,15 @@ type (
 	Port struct {
 		Ports ValueOrBraceList[Operation] `parser:"'port' @@"`
 	}
-	OsOption struct {
-		Value string `parser:"@(Ident | String)"`
-	}
 	Os struct {
-		Selected ValueOrBraceList[OsOption] `parser:"'os' @@"`
+		Selected ValueOrBraceList[Value[Text]] `parser:"'os' @@"`
 	}
 	HostsTarget struct {
-		Any     BooleanSet `parser:"( @('any')"`
-		NoRoute BooleanSet `parser:"| @('no-route')"`
-		Self    BooleanSet `parser:"| @('self')"`
-		Route   *string    `parser:"| ('route' @(String | Ident))"`
-		Host    *Host      `parser:"| @@ )"`
+		Any     BooleanSet   `parser:"( @('any')"`
+		NoRoute BooleanSet   `parser:"| @('no-route')"`
+		Self    BooleanSet   `parser:"| @('self')"`
+		Route   *Value[Text] `parser:"| ('route' @@)"`
+		Host    *Host        `parser:"| @@ )"`
 	}
 	HostFromFirstPort struct {
 		Port *Port `parser:"'from' @@"`
@@ -214,10 +214,10 @@ type (
 		Any   BooleanSet `parser:"@('any') )"`
 	}
 	IcmpCode struct {
-		Name         *string `parser:"( @(String | Ident)"`
-		Number       *int    `parser:"| @Number)"`
-		CodeAsName   *string `parser:"( 'code' (@String"`
-		CodeAsNumber *int    `parser:"| @Number) )?"`
+		Name         *Value[Text]   `parser:"( @@"`
+		Number       *Value[Number] `parser:"| @@)"`
+		CodeAsName   *Value[Text]   `parser:"( 'code' (@@"`
+		CodeAsNumber *Value[Number] `parser:"| @@) )?"`
 	}
 	IcmpType struct {
 		Codes ValueOrBraceList[IcmpCode] `parser:"'icmp-type' @@"`
@@ -230,21 +230,21 @@ type (
 		Number   int    `parser:"@Hexnumber"`
 	}
 	Label struct {
-		Text string `parser:"'label' @(String | Ident)"`
+		Text Value[Text] `parser:"'label' @@"`
 	}
 	Tag struct {
-		Text string `parser:"'tag' @(String | Ident)"`
+		Text Value[Text] `parser:"'tag' @@"`
 	}
 	Tagged struct {
-		Negate BooleanSet `parser:"@('!')?"`
-		Text   string     `parser:"'tagged' @(String | Ident)"`
+		Negate BooleanSet  `parser:"@('!')?"`
+		Text   Value[Text] `parser:"'tagged' @@"`
 	}
 	ScrubOption struct {
-		NoDf          BooleanSet `parser:"@('no-df')"`
-		MinTtl        *int       `parser:"| ('min-ttl' @Number)"`
-		MaxMss        *int       `parser:"| ('max-mss' @Number)"`
-		ReassembleTcp BooleanSet `parser:"| @('reassemble' 'tcp')"`
-		RandomId      BooleanSet `parser:"| @('random-id')"`
+		NoDf          BooleanSet     `parser:"@('no-df')"`
+		MinTtl        *Value[Number] `parser:"| ('min-ttl' @@)"`
+		MaxMss        *Value[Number] `parser:"| ('max-mss' @@)"`
+		ReassembleTcp BooleanSet     `parser:"| @('reassemble' 'tcp')"`
+		RandomId      BooleanSet     `parser:"| @('random-id')"`
 	}
 	ScrubOptions struct {
 		Options ValueOrRawList[ScrubOption] `parser:"@@"`
@@ -258,79 +258,78 @@ type (
 		Port Port `parser:"'port' @@"`
 	}
 	MaxPacketRate struct {
-		Packets int  `parser:"'max-pkt-rate' @Number"`
-		Seconds *int `parser:"('/' @Number)?"`
-	}
-	RedirHost struct {
-		Address Address `parser:"@@"`
-		Prefix  *int    `parser:"('/' @Number)?"`
+		Packets Value[Number]  `parser:"'max-pkt-rate' @@"`
+		Seconds *Value[Number] `parser:"('/' @@)?"`
 	}
 	AfTo struct {
-		AddressFamily AddressFamily                `parser:"'af-to' @@"`
-		From          ValueOrBraceList[RedirHost]  `parser:"'from' @@"`
-		To            *ValueOrBraceList[RedirHost] `parser:"('to' @@)?"`
+		AddressFamily AddressFamily           `parser:"'af-to' @@"`
+		From          ValueOrBraceList[Host]  `parser:"'from' @@"`
+		To            *ValueOrBraceList[Host] `parser:"('to' @@)?"`
 	}
 	PortSpec struct {
-		Name             *string `parser:"'port' ( @(Ident | String)"`
-		Number           *int    `parser:"| @Number )"`
-		RangedToWildcard *string `parser:"(':' ( @('*')"`
-		RangedToNumber   *int    `parser:"| @Number"`
-		RangedToName     *string `parser:"| @(Ident | String) ))?"`
+		Name             *Value[Text]   `parser:"'port' ( @@"`
+		Number           *Value[Number] `parser:"| @@ )"`
+		RangedToWildcard BooleanSet     `parser:"(':' ( @('*')"`
+		RangedToNumber   *Value[Number] `parser:"| @@"`
+		RangedToName     *Value[Text]   `parser:"| @@ ))?"`
+	}
+	SourceHash struct {
+		Value *Value[Text] `parser:"'source-hash' @@?"`
 	}
 	PoolType struct {
-		Bitmask       BooleanSet `parser:"( @('bitmask')"`
-		LeastStates   BooleanSet `parser:"| @('least-states')"`
-		Random        BooleanSet `parser:"| @('random')"`
-		RoundRobin    BooleanSet `parser:"| @('round-robin')"`
-		SourceHash    *string    `parser:"| ('source-hash' @(String | Ident)) )"`
-		StickyAddress BooleanSet `parser:"@('sticky-address')"`
+		Bitmask       BooleanSet  `parser:"@('bitmask')"`
+		LeastStates   BooleanSet  `parser:"| @('least-states')"`
+		Random        BooleanSet  `parser:"| @('random')"`
+		RoundRobin    BooleanSet  `parser:"| @('round-robin')"`
+		SourceHash    *SourceHash `parser:"| @@"`
+		StickyAddress BooleanSet  `parser:"| @('sticky-address')"`
 	}
 	BinAtTo struct {
-		To       ValueOrBraceList[RedirHost] `parser:"'binat-to' @@"`
-		PortSpec *PortSpec                   `parser:"@@?"`
-		PoolType *PoolType                   `parser:"@@?"`
+		To       ValueOrBraceList[Host] `parser:"'binat-to' @@"`
+		PortSpec *PortSpec              `parser:"@@?"`
+		PoolType *PoolType              `parser:"@@?"`
 	}
 	RdrTo struct {
-		Host     ValueOrBraceList[RedirHost] `parser:"'rdr-to' @@"`
-		PortSpec *PortSpec                   `parser:"@@?"`
-		PoolType *PoolType                   `parser:"@@?"`
+		Host     ValueOrBraceList[Host] `parser:"'rdr-to' @@"`
+		PortSpec *PortSpec              `parser:"@@?"`
+		PoolType *PoolType              `parser:"@@?"`
 	}
 	NatTo struct {
-		Host       ValueOrBraceList[RedirHost] `parser:"'nat-to' @@"`
-		PortSpec   *PortSpec                   `parser:"@@?"`
-		PoolType   *PoolType                   `parser:"@@?"`
-		StaticPort BooleanSet                  `parser:"@('static-port')?"`
+		Host       ValueOrBraceList[Host] `parser:"'nat-to' @@"`
+		PortSpec   *PortSpec              `parser:"@@?"`
+		PoolType   *PoolType              `parser:"@@?"`
+		StaticPort BooleanSet             `parser:"@('static-port')?"`
 	}
 
 	FilterOption struct {
-		User             *User          `parser:"@@"`
-		Group            *Group         `parser:"| @@"`
-		Flags            *Flags         `parser:"| @@"`
-		IcmpType         *IcmpType      `parser:"| @@"`
-		IcmpType6        *IcmpType6     `parser:"| @@"`
-		Tos              *Tos           `parser:"| ('tos' @@)"`
-		State            *State         `parser:"| @@"`
-		ScrubOption      *ScrubOptions  `parser:"| ('scrub' '(' @@ ')')"`
-		Fragment         BooleanSet     `parser:"| @('fragment')"`
-		AllowOpts        BooleanSet     `parser:"| @('allow-opts')"`
-		Once             BooleanSet     `parser:"| @('once')"`
-		DivertPacketPort *Port          `parser:"| ('divert-packet' @@)"`
-		DivertReply      BooleanSet     `parser:"| @('divert-reply')"`
-		DivertTo         DivertTo       `parser:"| @@"`
-		Label            *Label         `parser:"| @@"`
-		Tag              *Tag           `parser:"| @@"`
-		Tagged           *Tagged        `parser:"| @@"`
-		MaxPacketRate    *MaxPacketRate `parser:"| @@"`
-		SetDelay         *int           `parser:"| ('set' 'delay' @Number)"`
-		SetPrio          *[]int         `parser:"| ('set' 'prio'  (@Number | '(' @Number (',' @Number)* ')' ))"`
-		SetQueue         *[]string      `parser:"| ('set' 'queue' (@String | '(' @String (',' @String)* ')' ))"`
-		Rtable           *int           `parser:"| ('rtable' @Number)"`
-		Probability      *int           `parser:"| ('probability' @Number '%')"`
-		Prio             *int           `parser:"| ('prio' @Number)"`
-		AfTo             *AfTo          `parser:"| @@"`
-		BinAtTo          *BinAtTo       `parser:"| @@"`
-		RdrTo            *RdrTo         `parser:"| @@"`
-		NatTo            *NatTo         `parser:"| @@"`
+		User             *User            `parser:"@@"`
+		Group            *Group           `parser:"| @@"`
+		Flags            *Flags           `parser:"| @@"`
+		IcmpType         *IcmpType        `parser:"| @@"`
+		IcmpType6        *IcmpType6       `parser:"| @@"`
+		Tos              *Tos             `parser:"| ('tos' @@)"`
+		State            *State           `parser:"| @@"`
+		ScrubOption      *ScrubOptions    `parser:"| ('scrub' '(' @@ ')')"`
+		Fragment         BooleanSet       `parser:"| @('fragment')"`
+		AllowOpts        BooleanSet       `parser:"| @('allow-opts')"`
+		Once             BooleanSet       `parser:"| @('once')"`
+		DivertPacketPort *Port            `parser:"| ('divert-packet' @@)"`
+		DivertReply      BooleanSet       `parser:"| @('divert-reply')"`
+		DivertTo         DivertTo         `parser:"| @@"`
+		Label            *Label           `parser:"| @@"`
+		Tag              *Tag             `parser:"| @@"`
+		Tagged           *Tagged          `parser:"| @@"`
+		MaxPacketRate    *MaxPacketRate   `parser:"| @@"`
+		SetDelay         *Value[Number]   `parser:"| ('set' 'delay' @@)"`
+		SetPrio          *[]Value[Number] `parser:"| ('set' 'prio'  (@@ | '(' @@ (',' @@)* ')' ))"`
+		SetQueue         *[]Value[Text]   `parser:"| ('set' 'queue' (@@ | '(' @@ (',' @@)* ')' ))"`
+		Rtable           *Value[Number]   `parser:"| ('rtable' @@)"`
+		Probability      *Value[Number]   `parser:"| ('probability' @@ '%')"`
+		Prio             *Value[Number]   `parser:"| ('prio' @@)"`
+		AfTo             *AfTo            `parser:"| @@"`
+		BinAtTo          *BinAtTo         `parser:"| @@"`
+		RdrTo            *RdrTo           `parser:"| @@"`
+		NatTo            *NatTo           `parser:"| @@"`
 		// [ route ]: Specifies a routing action.
 		// [ "set tos" tos ]: Sets the Type of Service (TOS) field in the IP header.
 		// [ [ "!" ] "received-on" ( interface-name | interface-group ) ]: Matches packets received on a specific interface or interface group, optionally negated.
@@ -354,9 +353,9 @@ type (
 		Label         *Label         `parser:"@@?"`
 	}
 	Literal struct {
-		Address Address `parser:"@@"`
-		String  string  `parser:"| @String"`
-		Number  int     `parser:"| @Number"`
+		Address Address       `parser:"@@"`
+		String  Value[Text]   `parser:"| @@"`
+		Number  Value[Number] `parser:"| @@"`
 	}
 	Assignment struct {
 		Variable string                    `parser:"@Ident"`
