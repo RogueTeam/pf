@@ -42,7 +42,7 @@ type (
 		Global BooleanSet `parser:"'flush' @('global')?"`
 	}
 	StateOverloadEntry struct {
-		Value Value[String]            `parser:"'overload' '<' @@ '>'"`
+		Value Value[Text]              `parser:"'overload' '<' @@ '>'"`
 		Flush *FlushStateOverloadEntry `parser:"@@?"`
 	}
 	MaxSrcConnRage struct {
@@ -79,11 +79,15 @@ type (
 		IfSpec IfSpec `parser:"'skip' 'on' @@"`
 	}
 	DebugOption struct {
-		Level string `parser:"'debug' @('emerg' | 'alert' | 'crit' | 'err' | 'warning' | 'notice' | 'info' | 'debug')"`
+		Level string `parser:"'debug' @('urgent' | 'emerg' | 'alert' | 'crit' | 'err' | 'warning' | 'notice' | 'info' | 'debug')"`
 	}
 	ReassembleOption struct {
 		Reassemble BooleanSet `parser:"'reassemble' (@('yes') | 'no')"`
 		NoDf       BooleanSet `parser:"@('no-df')?"`
+	}
+	OtherOption struct {
+		Key   string         `parser:"@Ident"`
+		Value Value[Literal] `parser:"@@"`
 	}
 	Option struct {
 		Timeout             *TimeoutOption             `parser:"'set' (@@"`
@@ -96,7 +100,8 @@ type (
 		FingerPrints        *FingerPrintsOption        `parser:"| @@"`
 		SkipOn              *SkipOnOption              `parser:"| @@"`
 		Debug               *DebugOption               `parser:"| @@"`
-		Reassemble          *ReassembleOption          `parser:"| @@)"`
+		Reassemble          *ReassembleOption          `parser:"| @@"`
+		Other               *OtherOption               `parser:"| @@)"`
 	}
 	ActionBlockReturn struct {
 		Return string `parser:"@('return' | 'drop')"`
@@ -116,7 +121,7 @@ type (
 		To      *Value[Text] `parser:"| ('to' @@)"`
 	}
 	Log struct {
-		Options ValueOrRawList[LogOption] `parser:"'log' ('(' @@ ')')?"`
+		Options *ValueOrRawList[LogOption] `parser:"'log' ('(' @@ ')')?"`
 	}
 	PfRuleOn struct {
 		IfSpec  *IfSpec        `parser:"'on' ( @@"`
@@ -177,7 +182,7 @@ type (
 	}
 	HostFromFirstPort struct {
 		Port *Port `parser:"'from' @@"`
-		Os   *Os   `parser:"@@"`
+		Os   *Os   `parser:"@@?"`
 	}
 	HostFromFirstOs struct {
 		Os *Os `parser:"'from' @@"`
@@ -209,9 +214,9 @@ type (
 		Selected ValueOrBraceList[Operation] `parser:"'group' @@"`
 	}
 	Flags struct {
-		Left  []string   `parser:"'flags' @('F' | 'S' | 'R' | 'P' | 'A' | 'U' | 'E' | 'W')?"`
-		Right string     `parser:"'/' (@('F' | 'S' | 'R' | 'P' | 'A' | 'U' | 'E' | 'W')"`
-		Any   BooleanSet `parser:"@('any') )"`
+		Left  []string   `parser:"'flags' @Ident?"`
+		Right string     `parser:"'/' (@Ident"`
+		Any   BooleanSet `parser:"@('any')? )"`
 	}
 	IcmpCode struct {
 		Name         *Value[Text]   `parser:"( @@"`
@@ -223,7 +228,7 @@ type (
 		Codes ValueOrBraceList[IcmpCode] `parser:"'icmp-type' @@"`
 	}
 	IcmpType6 struct {
-		Codes ValueOrBraceList[IcmpCode] `parser:"'icmp-type' @@"`
+		Codes ValueOrBraceList[IcmpCode] `parser:"'icmp6-type' @@"`
 	}
 	Tos struct {
 		Selected string `parser:"@('lowdelay' | 'throughput' | 'reliability')"`
@@ -334,14 +339,17 @@ type (
 		// [ "set tos" tos ]: Sets the Type of Service (TOS) field in the IP header.
 		// [ [ "!" ] "received-on" ( interface-name | interface-group ) ]: Matches packets received on a specific interface or interface group, optionally negated.
 	}
+	PfRuleOption struct {
+		Direction     *string        `parser:"@('in' | 'out')"`
+		Log           *Log           `parser:"| @@"`
+		Quick         BooleanSet     `parser:"| @('quick')"`
+		On            *PfRuleOn      `parser:"| @@"`
+		AddressFamily *AddressFamily `parser:"| @@"`
+		ProtoSpec     *ProtoSpec     `parser:"| @@"`
+	}
 	PfRule struct {
 		Action        Action                        `parser:"@@"`
-		Direction     *string                       `parser:"@('in' | 'out')?"`
-		Log           *Log                          `parser:"@@?"`
-		Quick         BooleanSet                    `parser:"@('quick')?"`
-		On            *PfRuleOn                     `parser:"@@?"`
-		AddressFamily *AddressFamily                `parser:"@@?"`
-		ProtoSpec     *ProtoSpec                    `parser:"@@?"`
+		Options       []*PfRuleOption               `parser:"@@*"`
 		Hosts         *Hosts                        `parser:"@@?"`
 		FilterOptions *ValueOrRawList[FilterOption] `parser:"@@?"`
 	}
@@ -369,7 +377,7 @@ type (
 		ProtoSpec     *ProtoSpec                    `parser:"@@?"`
 		Hosts         *Hosts                        `parser:"@@?"`
 		FilterOptions *ValueOrRawList[FilterOption] `parser:"@@?"`
-		Body          []Line                        `parser:"'{' @@* '}'"`
+		Body          []*Line                       `parser:"'{' EOL (@@ EOL?)* EOL? '}'"`
 	}
 	TableAddress struct {
 		Hostname *string       `parser:"@Hostname"`
@@ -391,7 +399,7 @@ type (
 	}
 	TableRule struct {
 		Name    Value[Text]    `parser:"'table' '<' @@ '>'"`
-		Options []*TableOption `parser:"@@*"`
+		Options []*TableOption `parser:"@@+"`
 	}
 	Line struct {
 		Option        *Option        `parser:"@@"`
@@ -407,6 +415,6 @@ type (
 		// Inclue *Inclue        `parser:"| @@"`
 	}
 	Configuration struct {
-		Line []*Line `parser:"@@*"`
+		Line []*Line `parser:"(@@ EOL?)*"`
 	}
 )
