@@ -409,10 +409,9 @@ type (
 		Assignment    *Assignment    `parser:"| @@"`
 		// QueueRule *QueueRule     `parser:"| @@"`
 		AnchorRule *AnchorRule `parser:"| @@"`
-		// AnchorClose *AnchorClose   `parser:"| @@"`
 		// LoadAnchor *LoadAnchor    `parser:"| @@"`
 		TableRule *TableRule `parser:"| @@"`
-		// Inclue *Inclue        `parser:"| @@"`
+		// Include *Include        `parser:"| @@"`
 	}
 	Configuration struct {
 		Line []*Line `parser:"(@@ EOL?)*"`
