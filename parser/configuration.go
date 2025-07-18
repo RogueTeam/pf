@@ -1,3 +1,4 @@
+// Check references: https://man.openbsd.org/pf.conf#EXAMPLES
 package parser
 
 import (
@@ -133,15 +134,16 @@ type (
 		Address *netip.Addr     `parser:"| @Address"`
 	}
 	Address struct {
-		IP       *IP     `parser:"@@"`
-		Hostname *string `parser:"| @Hostname"`
-		Other    *string `parser:"| @Ident"`
+		IP         *IP        `parser:"@@"`
+		UrpfFailed BooleanSet `parser:"| @('urpf-failed')"`
+		Hostname   *string    `parser:"| @Hostname"`
+		Other      *string    `parser:"| @Ident"`
 	}
 	Host struct {
 		Negate   BooleanSet `parser:"@('!')?"`
 		Address  *Address   `parser:"( ( @@"`
 		Weight   *int       `parser:"('weight' @Number)? )"`
-		AsString *string    `parser:"| ('<' @String '>') )"`
+		AsString *string    `parser:"| ('<' @(String | Ident) '>') )"`
 	}
 	Unary struct {
 		Operator string  `parser:"@('=' | '!=' | '<' | '<=' | '>' | '>=')?"`
@@ -173,16 +175,22 @@ type (
 		Route   *string    `parser:"| ('route' @(String | Ident))"`
 		Host    *Host      `parser:"| @@ )"`
 	}
+	HostFrom struct {
+		From *ValueOrBraceList[HostsTarget] `parser:"'from' @@?"`
+		Port *Port                          `parser:"@@?"`
+		Os   *Os                            `parser:"@@?"`
+	}
+	HostTo struct {
+		To   *ValueOrBraceList[HostsTarget] `parser:"'to' @@?"`
+		Port *Port                          `parser:"@@?"`
+	}
 	HostsFromTo struct {
-		From     ValueOrBraceList[HostsTarget] `parser:"'from' @@"`
-		FromPort *Port                         `parser:"@@?"`
-		FromOs   *Os                           `parser:"@@?"`
-		To       ValueOrBraceList[HostsTarget] `parser:"'to' @@"`
-		ToPort   *Port                         `parser:"@@?"`
+		From *HostFrom `parser:"@@"`
+		To   *HostTo   `parser:"| @@"`
 	}
 	Hosts struct {
-		All         BooleanSet   `parser:"@('all')"`
-		HostsFromTo *HostsFromTo `parser:"| @@"`
+		All         BooleanSet     `parser:"@('all')"`
+		HostsFromTo []*HostsFromTo `parser:"| @@+"`
 	}
 	User struct {
 		Selected ValueOrBraceList[Operation] `parser:"'user' @@"`
@@ -194,6 +202,18 @@ type (
 		Left  []string   `parser:"'flags' @('F' | 'S' | 'R' | 'P' | 'A' | 'U' | 'E' | 'W')?"`
 		Right string     `parser:"'/' (@('F' | 'S' | 'R' | 'P' | 'A' | 'U' | 'E' | 'W')"`
 		Any   BooleanSet `parser:"@('any') )"`
+	}
+	IcmpCode struct {
+		Name         *string `parser:"( @(String | Ident)"`
+		Number       *int    `parser:"| @Number)"`
+		CodeAsName   *string `parser:"( 'code' (@String"`
+		CodeAsNumber *int    `parser:"| @Number) )?"`
+	}
+	IcmpType struct {
+		Codes ValueOrBraceList[IcmpCode] `parser:"'icmp-type' @@"`
+	}
+	IcmpType6 struct {
+		Codes ValueOrBraceList[IcmpCode] `parser:"'icmp-type' @@"`
 	}
 	Tos struct {
 		Selected string `parser:"@('lowdelay' | 'throughput' | 'reliability')"`
@@ -219,36 +239,88 @@ type (
 	ScrubOptions struct {
 		Options ValueOrRawList[ScrubOption] `parser:"@@"`
 	}
+	State struct {
+		Mode    *string                      `parser:"@('no' | 'keep' | 'modulate' | 'synproxy') 'state'"`
+		Options *ValueOrRawList[StateOption] `parser:"('(' @@ ')')?"`
+	}
+	DivertTo struct {
+		Host Host `parser:"'divert-to' @@"`
+		Port Port `parser:"'port' @@"`
+	}
+	MaxPacketRate struct {
+		Packets int  `parser:"'max-pkt-rate' @Number"`
+		Seconds *int `parser:"('/' @Number)?"`
+	}
+	RedirHost struct {
+		Address Address `parser:"@@"`
+		Prefix  *int    `parser:"('/' @Number)?"`
+	}
+	AfTo struct {
+		AddressFamily AddressFamily                `parser:"'af-to' @@"`
+		From          ValueOrBraceList[RedirHost]  `parser:"'from' @@"`
+		To            *ValueOrBraceList[RedirHost] `parser:"('to' @@)?"`
+	}
+	PortSpec struct {
+		Name             *string `parser:"'port' ( @(Ident | String)"`
+		Number           *int    `parser:"| @Number )"`
+		RangedToWildcard *string `parser:"(':' ( @('*')"`
+		RangedToNumber   *int    `parser:"| @Number"`
+		RangedToName     *string `parser:"| @(Ident | String) ))?"`
+	}
+	PoolType struct {
+		Bitmask       BooleanSet `parser:"( @('bitmask')"`
+		LeastStates   BooleanSet `parser:"| @('least-states')"`
+		Random        BooleanSet `parser:"| @('random')"`
+		RoundRobin    BooleanSet `parser:"| @('round-robin')"`
+		SourceHash    *string    `parser:"| ('source-hash' @(String | Ident)) )"`
+		StickyAddress BooleanSet `parser:"@('sticky-address')"`
+	}
+	BinAtTo struct {
+		To       ValueOrBraceList[RedirHost] `parser:"'binat-to' @@"`
+		PortSpec *PortSpec                   `parser:"@@?"`
+		PoolType *PoolType                   `parser:"@@?"`
+	}
+	RdrTo struct {
+		Host     ValueOrBraceList[RedirHost] `parser:"'rdr-to' @@"`
+		PortSpec *PortSpec                   `parser:"@@?"`
+		PoolType *PoolType                   `parser:"@@?"`
+	}
+	NatTo struct {
+		Host       ValueOrBraceList[RedirHost] `parser:"'nat-to' @@"`
+		PortSpec   *PortSpec                   `parser:"@@?"`
+		PoolType   *PoolType                   `parser:"@@?"`
+		StaticPort BooleanSet                  `parser:"@('static-port')?"`
+	}
+
 	FilterOption struct {
-		User  *User  `parser:"@@"`
-		Group *Group `parser:"| @@"`
-		Flags *Flags `parser:"| @@"`
-		// TODO: IcmpType     *IcmpType                    `parser:"| @@"`
-		// TODO: IcmpType6    *IcmpType6                   `parser:"| @@"`
-		Tos          *Tos                         `parser:"| ('tos' @@)"`
-		State        *string                      `parser:"| (@('no' | 'keep' | 'modulate' | 'synproxy') 'state')"`
-		StateOptions *ValueOrRawList[StateOption] `parser:"| ('(' @@ ')')"`
-		ScrubOption  *ScrubOptions                `parser:"| ('scrub' '(' @@ ')')"`
-		// TODO: FRAGMENT
-		// TODO: ALLOWOPTIONS
-		// TODO: once
-		// TODO: Divert-packet
-		// TODO: divert-reply
-		// TODO: divert-to port
-		Label  *Label  `parser:"| @@"`
-		Tag    *Tag    `parser:"| @@"`
-		Tagged *Tagged `parser:"| @@"`
-		// max-pkt-rate number "/" seconds: Specifies the maximum packet rate in packets per second.
-		// "set delay" number: Sets a delay for packets.
-		// "set prio" ( number | "(" number [ [ "," ] number ] ")" ): Sets the priority of packets. Can be a single number or a range.
-		// "set queue" ( string | "(" string [ [ "," ] string ] ")" ): Assigns packets to a specific queue. Can be a single queue name or a list of queue names.
-		// "rtable" number: Specifies the routing table to use.
-		// "probability" number"%": Sets the probability of the rule matching.
-		// "prio" number: Sets the priority of the rule itself.
-		// "af-to" af "from" ( redirhost | "{" redirhost-list "}" ) [ "to" ( redirhost | "{" redirhost-list "}" ) ]: Redirects traffic to an address family from a specified host or list of hosts, optionally to another host or list of hosts.
-		// "binat-to" ( redirhost | "{" redirhost-list "}" ) [ portspec ] [ pooltype ]: Performs bidirectional NAT to a specified host or list of hosts, with optional port specification and pool type.
-		// "rdr-to" ( redirhost | "{" redirhost-list "}" ) [ portspec ] [ pooltype ]: Redirects traffic to a specified host or list of hosts, with optional port specification and pool type.
-		// "nat-to" ( redirhost | "{" redirhost-list "}" ) [ portspec ] [ pooltype ] [ "static-port" ]: Performs NAT to a specified host or list of hosts, with optional port specification, pool type, and static-port flag.
+		User             *User          `parser:"@@"`
+		Group            *Group         `parser:"| @@"`
+		Flags            *Flags         `parser:"| @@"`
+		IcmpType         *IcmpType      `parser:"| @@"`
+		IcmpType6        *IcmpType6     `parser:"| @@"`
+		Tos              *Tos           `parser:"| ('tos' @@)"`
+		State            *State         `parser:"| @@"`
+		ScrubOption      *ScrubOptions  `parser:"| ('scrub' '(' @@ ')')"`
+		Fragment         BooleanSet     `parser:"| @('fragment')"`
+		AllowOpts        BooleanSet     `parser:"| @('allow-opts')"`
+		Once             BooleanSet     `parser:"| @('once')"`
+		DivertPacketPort *Port          `parser:"| ('divert-packet' @@)"`
+		DivertReply      BooleanSet     `parser:"| @('divert-reply')"`
+		DivertTo         DivertTo       `parser:"| @@"`
+		Label            *Label         `parser:"| @@"`
+		Tag              *Tag           `parser:"| @@"`
+		Tagged           *Tagged        `parser:"| @@"`
+		MaxPacketRate    *MaxPacketRate `parser:"| @@"`
+		SetDelay         *int           `parser:"| ('set' 'delay' @Number)"`
+		SetPrio          *[]int         `parser:"| ('set' 'prio'  (@Number | '(' @Number (',' @Number)* ')' ))"`
+		SetQueue         *[]string      `parser:"| ('set' 'queue' (@String | '(' @String (',' @String)* ')' ))"`
+		Rtable           *int           `parser:"| ('rtable' @Number)"`
+		Probability      *int           `parser:"| ('probability' @Number '%')"`
+		Prio             *int           `parser:"| ('prio' @Number)"`
+		AfTo             *AfTo          `parser:"| @@"`
+		BinAtTo          *BinAtTo       `parser:"| @@"`
+		RdrTo            *RdrTo         `parser:"| @@"`
+		NatTo            *NatTo         `parser:"| @@"`
 		// [ route ]: Specifies a routing action.
 		// [ "set tos" tos ]: Sets the Type of Service (TOS) field in the IP header.
 		// [ [ "!" ] "received-on" ( interface-name | interface-group ) ]: Matches packets received on a specific interface or interface group, optionally negated.
