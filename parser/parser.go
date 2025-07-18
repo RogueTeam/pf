@@ -18,7 +18,9 @@ func init() {
 }
 
 func ParseReader(r io.Reader) (conf *Configuration, err error) {
-	return parser.Parse(":reader:", r) //	participle.Trace(os.Stdout),
+	// file, _ := os.Create(time.Now().String())
+	// defer file.Close()
+	return parser.Parse(":reader:", r) //	participle.Trace(file),
 
 }
 

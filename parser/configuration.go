@@ -57,8 +57,8 @@ type (
 		MaxSrcConn     *int                `parser:"| ('max-src-conn' @Number)"`
 		MaxSrcConnRage *[2]int             `parser:"| ('max-src-conn-rate' @Number '/' @Number)"`
 		Overload       *StateOverloadEntry `parser:"| @@"`
-		IfFloating     BooleanSet          `parser:"@('if-floating')"`
-		Floating       BooleanSet          `parser:"@('floating')"`
+		IfFloating     BooleanSet          `parser:"| @('if-floating')"`
+		Floating       BooleanSet          `parser:"| @('floating')"`
 	}
 	StateDefaultsOption struct {
 		Defaults ValueOrRawList[StateOption] `parser:"'state-defaults' @@"`
@@ -106,10 +106,10 @@ type (
 		Block *ActionBlock `parser:"| @@"`
 	}
 	LogOption struct {
-		All     BooleanSet `parser:"@('all'"`
+		All     BooleanSet `parser:"@('all')"`
 		Matches BooleanSet `parser:"| @('matches')"`
 		User    BooleanSet `parser:"| @('user')"`
-		To      *string    `parser:"| ('to' @Ident))"`
+		To      *string    `parser:"| ('to' @Ident)"`
 	}
 	Log struct {
 		Options ValueOrRawList[LogOption] `parser:"'log' ('(' @@ ')')?"`
@@ -175,14 +175,24 @@ type (
 		Route   *string    `parser:"| ('route' @(String | Ident))"`
 		Host    *Host      `parser:"| @@ )"`
 	}
+	HostFromFirstPort struct {
+		Port *Port `parser:"'from' @@"`
+		Os   *Os   `parser:"@@"`
+	}
+	HostFromFirstOs struct {
+		Os *Os `parser:"'from' @@"`
+	}
 	HostFrom struct {
-		From *ValueOrBraceList[HostsTarget] `parser:"'from' @@?"`
-		Port *Port                          `parser:"@@?"`
-		Os   *Os                            `parser:"@@?"`
+		FirstPort *HostFromFirstPort             `parser:"@@"`
+		FirstOs   *HostFromFirstOs               `parser:"| @@"`
+		Target    *ValueOrBraceList[HostsTarget] `parser:"| ('from' @@"`
+		Port      *Port                          `parser:"@@?"`
+		Os        *Os                            `parser:"@@? )"`
 	}
 	HostTo struct {
-		To   *ValueOrBraceList[HostsTarget] `parser:"'to' @@?"`
-		Port *Port                          `parser:"@@?"`
+		OnlyPort *Port                          `parser:"  ('to' @@)"`
+		Target   *ValueOrBraceList[HostsTarget] `parser:"| ('to' @@"`
+		Port     *Port                          `parser:"@@?)"`
 	}
 	HostsFromTo struct {
 		From *HostFrom `parser:"@@"`
