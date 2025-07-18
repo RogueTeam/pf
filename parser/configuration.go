@@ -361,6 +361,38 @@ type (
 		Variable string                    `parser:"@Ident"`
 		Value    ValueOrBraceList[Literal] `parser:"'=' @@"`
 	}
+	AnchorRule struct {
+		Name          Value[Text]                   `parser:"'anchor' @@"`
+		Direction     *string                       `parser:"@('in' | 'out')?"`
+		OnIfSpec      *IfSpec                       `parser:"('on' @@)?"`
+		AddressFamily *AddressFamily                `parser:"@@?"`
+		ProtoSpec     *ProtoSpec                    `parser:"@@?"`
+		Hosts         *Hosts                        `parser:"@@?"`
+		FilterOptions *ValueOrRawList[FilterOption] `parser:"@@?"`
+		Body          []Line                        `parser:"'{' @@* '}'"`
+	}
+	TableAddress struct {
+		Hostname *string       `parser:"@Hostname"`
+		IfSpec   *IfSpec       `parser:"| @@"`
+		Self     BooleanSet    `parser:"| @('self')"`
+		Prefix   *netip.Prefix `parser:"| @CIDR"`
+		Address  *netip.Addr   `parser:"| @Address"`
+	}
+	TableAddressSpec struct {
+		Negate BooleanSet   `parser:"@('!')?"`
+		Target TableAddress `parser:"@@"`
+	}
+	TableOption struct {
+		Persist   BooleanSet                          `parser:"@('persist')"`
+		Const     BooleanSet                          `parser:"| @('const')"`
+		Counters  BooleanSet                          `parser:"| @('counters')"`
+		File      *Value[Text]                        `parser:"| ('file' @@)"`
+		Addresses *ValueOrBraceList[TableAddressSpec] `parser:"| @@"`
+	}
+	TableRule struct {
+		Name    Value[Text]    `parser:"'table' '<' @@ '>'"`
+		Options []*TableOption `parser:"@@*"`
+	}
 	Line struct {
 		Option        *Option        `parser:"@@"`
 		PfRule        *PfRule        `parser:"| @@"`
@@ -368,10 +400,10 @@ type (
 		AntiSpoofRule *AntiSpoofRule `parser:"| @@"`
 		Assignment    *Assignment    `parser:"| @@"`
 		// QueueRule *QueueRule     `parser:"| @@"`
-		// AnchorRule *AnchorRule    `parser:"| @@"`
+		AnchorRule *AnchorRule `parser:"| @@"`
 		// AnchorClose *AnchorClose   `parser:"| @@"`
 		// LoadAnchor *LoadAnchor    `parser:"| @@"`
-		// TableRule *TableRule     `parser:"| @@"`
+		TableRule *TableRule `parser:"| @@"`
 		// Inclue *Inclue        `parser:"| @@"`
 	}
 	Configuration struct {
